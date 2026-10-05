@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-terminal-bg text-slate-200 antialiased;
+  font-feature-settings: "tnum" 1, "ss01" 1;
+}
+
+/* Tabular numbers everywhere digits align matters (tables, KPIs). */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+@layer components {
+  .panel {
+    @apply rounded-lg border border-terminal-border bg-terminal-panel;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium;
+  }
+}
+
+/* Thin, terminal-style scrollbars. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-terminal-border;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}

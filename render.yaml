@@ -1,0 +1,97 @@
+# Render Blueprint — one-click deploy for PokéQuant.
+# https://render.com/docs/blueprint-spec
+#
+# Provisions: Postgres, Redis, the FastAPI/ML API, and the Next.js web app.
+# After the first deploy, add your optional secret keys (GROQ_API_KEY, etc.) in
+# the Render dashboard under each service's Environment settings.
+#
+# Note: Render's managed Postgres does NOT include the TimescaleDB extension.
+# The migrations are written to run on vanilla Postgres (TimescaleDB-specific
+# DDL is applied conditionally), so this works out of the box.
+
+databases:
+  - name: pokequant-db
+    databaseName: pokequant
+    user: pokequant
+    plan: free            # free tier: 1GB, expires after 90 days — upgrade for persistence
+
+services:
+  # ---------------------------------------------------------------------------
+  # Redis (cache). Optional — the API degrades gracefully without it.
+  # ---------------------------------------------------------------------------
+  - type: redis
+    name: pokequant-redis
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []        # only accessible from within Render's network
+
+  # ---------------------------------------------------------------------------
+  # API + data/ML core (FastAPI). Runs migrations + bootstrap on first boot.
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: pokequant-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: ./apps/api
+    plan: starter          # ML deps (torch, lightgbm) exceed free tier's 512MB RAM
+    healthCheckPath: /health
+    envVars:
+      - key: POKEQUANT_ENV
+        value: production
+      - key: LOG_JSON
+        value: "true"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pokequant-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: pokequant-redis
+          property: connectionString
+      - key: ARTIFACT_DIR
+        value: /data/artifacts
+      - key: BOOTSTRAP
+        value: "1"
+      - key: CORS_ORIGINS
+        # Set this to your deployed web URL after first deploy, e.g.
+        # https://pokequant-web.onrender.com
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false        # add in dashboard — enables the AI assistant
+      - key: POKEMONTCG_API_KEY
+        sync: false
+      - key: FRED_API_KEY
+        sync: false
+      - key: EBAY_CLIENT_ID
+        sync: false
+      - key: EBAY_CLIENT_SECRET
+        sync: false
+    disk:
+      name: pokequant-artifacts
+      mountPath: /data/artifacts
+      sizeGB: 1            # persists trained models + bootstrap sentinel across deploys
+
+  # ---------------------------------------------------------------------------
+  # Web app (Next.js).
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: pokequant-web
+    runtime: docker
+    dockerfilePath: ./apps/web/Dockerfile
+    dockerContext: ./apps/web
+    plan: starter
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_BASE_URL
+        # Internal URL for server-to-server calls (set after API deploys).
+        fromService:
+          type: web
+          name: pokequant-api
+          property: hostport
+      - key: NEXT_PUBLIC_API_BASE_URL
+        # Public API URL for browser calls. Set to the API's public URL, e.g.
+        # https://pokequant-api.onrender.com
+        sync: false

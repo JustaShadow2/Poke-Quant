@@ -1,0 +1,97 @@
+[project]
+name = "pokequant-api"
+version = "0.1.0"
+description = "PokeQuant - quantitative alternative-assets research platform (API + data + ML core)"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+
+# NOTE: runtime target is Python 3.12 (see docker/). We keep requires-python at
+# >=3.9 so the pure-Python core can be unit-tested on the host interpreter, and
+# use `from __future__ import annotations` everywhere for forward-compatibility.
+dependencies = [
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "psycopg[binary]>=3.1",
+    "httpx>=0.27",
+    "tenacity>=8.4",
+    "structlog>=24.1",
+    "typer>=0.12",
+    "python-dateutil>=2.9",
+    "orjson>=3.10",
+    "numpy>=1.26",
+    "pandas>=2.1",
+    "scikit-learn>=1.4",
+    "lightgbm>=4.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2",
+    "pytest-cov>=5.0",
+    "ruff>=0.5",
+    "mypy>=1.10",
+    "types-python-dateutil",
+]
+
+[project.scripts]
+pokequant = "pokequant.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["pokequant"]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 100
+src = ["pokequant", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "C4", "SIM", "TID", "RUF"]
+ignore = [
+    "B008",  # FastAPI uses function-call defaults (Depends) intentionally
+    # We support a 3.9 runtime in db/models.py (annotations evaluated at runtime),
+    # so keep explicit Optional/Union rather than PEP 604 syntax everywhere.
+    "UP007",
+    "UP045",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["pokequant"]
+
+[tool.mypy]
+python_version = "3.9"
+plugins = ["pydantic.mypy"]
+strict = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+
+# numpy/scikit-learn are (partially) untyped; inside the numeric core we accept
+# bare ndarray generics and Any returns from those libraries rather than litter
+# the code with casts. All other strictness still applies.
+[[tool.mypy.overrides]]
+module = [
+    "pokequant.ml.baselines",
+    "pokequant.ml.gbm",
+    "pokequant.ml.evaluate",
+    "pokequant.synthetic.generator",
+]
+disallow_any_generics = false
+warn_return_any = false
+
+[tool.pytest.ini_options]
+addopts = "-ra -q"
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.coverage.run]
+source = ["pokequant"]
+omit = ["pokequant/db/migrations/*", "pokequant/cli.py"]

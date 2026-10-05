@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# Dev tooling / caches kept inside workspace
+.dev/
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# Data & artifacts
+data/artifacts/
+data/local/
+*.parquet
+*.duckdb
+mlruns/
+
+# Node / Next.js
+node_modules/
+apps/web/.next/
+apps/web/out/
+apps/web/next-env.d.ts
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

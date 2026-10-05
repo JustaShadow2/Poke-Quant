@@ -1,0 +1,80 @@
+# One-command local bring-up: db (+timescale) -> api (migrate+bootstrap+serve) -> web.
+#   docker compose up --build
+# The API entrypoint applies migrations and, on first boot, bootstraps a full
+# synthetic demo (seed -> synth -> features -> train -> forecast). Set BOOTSTRAP=0
+# to skip, or BOOTSTRAP=force to rerun.
+
+services:
+  db:
+    image: timescale/timescaledb:latest-pg16
+    environment:
+      POSTGRES_USER: pokequant
+      POSTGRES_PASSWORD: pokequant
+      POSTGRES_DB: pokequant
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pokequant -d pokequant"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: ./apps/api
+    environment:
+      POKEQUANT_ENV: local
+      LOG_JSON: "false"
+      DATABASE_URL: postgresql+psycopg://pokequant:pokequant@db:5432/pokequant
+      REDIS_URL: redis://redis:6379/0
+      ARTIFACT_DIR: /data/artifacts
+      CORS_ORIGINS: http://localhost:3000
+      BOOTSTRAP: "1"
+      # Optional provider credentials (pipeline uses synthetic data without them).
+      POKEMONTCG_API_KEY: ${POKEMONTCG_API_KEY:-}
+      FRED_API_KEY: ${FRED_API_KEY:-}
+      EBAY_CLIENT_ID: ${EBAY_CLIENT_ID:-}
+      EBAY_CLIENT_SECRET: ${EBAY_CLIENT_SECRET:-}
+      EBAY_MARKETPLACE_ID: ${EBAY_MARKETPLACE_ID:-EBAY_US}
+    ports:
+      - "8000:8000"
+    volumes:
+      - artifacts:/data/artifacts
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 240s
+
+  web:
+    build:
+      context: ./apps/web
+    environment:
+      # Server-to-server (server components) vs browser origin.
+      API_BASE_URL: http://api:8000
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  artifacts:

@@ -1,0 +1,148 @@
+{
+  "asset_class": {"slug": "pokemon", "name": "Pokemon TCG"},
+  "categories": {
+    "booster_box": "Booster Box",
+    "elite_trainer_box": "Elite Trainer Box",
+    "booster_bundle": "Booster Bundle",
+    "ultra_premium_collection": "Ultra Premium Collection",
+    "collection_box": "Collection Box",
+    "premium_collection": "Premium Collection"
+  },
+  "instruments": [
+    {
+      "symbol": "PKM-CEL-UPC",
+      "name": "Celebrations Ultra Premium Collection",
+      "category": "ultra_premium_collection",
+      "release_date": "2021-10-08",
+      "msrp_usd": 119.99,
+      "attributes": {"hype": 1.6, "out_of_print_months": 9, "long_run_multiple": 3.2},
+      "identifiers": {"pokemontcg": "cel25", "ebay_query": "Celebrations Ultra Premium Collection sealed"}
+    },
+    {
+      "symbol": "PKM-HF-ETB",
+      "name": "Hidden Fates Elite Trainer Box",
+      "category": "elite_trainer_box",
+      "release_date": "2019-08-23",
+      "msrp_usd": 39.99,
+      "attributes": {"hype": 1.6, "out_of_print_months": 8, "long_run_multiple": 3.4},
+      "identifiers": {"pokemontcg": "sm115", "ebay_query": "Hidden Fates Elite Trainer Box sealed"}
+    },
+    {
+      "symbol": "PKM-SWSH11-BB",
+      "name": "Lost Origin Booster Box",
+      "category": "booster_box",
+      "release_date": "2022-09-09",
+      "msrp_usd": 143.64,
+      "attributes": {"hype": 1.2, "out_of_print_months": 18, "long_run_multiple": 2.3},
+      "identifiers": {"pokemontcg": "swsh11", "ebay_query": "Lost Origin Booster Box sealed"}
+    },
+    {
+      "symbol": "PKM-SWSH09-BB",
+      "name": "Brilliant Stars Booster Box",
+      "category": "booster_box",
+      "release_date": "2022-02-25",
+      "msrp_usd": 143.64,
+      "attributes": {"hype": 1.25, "out_of_print_months": 18, "long_run_multiple": 2.4},
+      "identifiers": {"pokemontcg": "swsh9", "ebay_query": "Brilliant Stars Booster Box sealed"}
+    },
+    {
+      "symbol": "PKM-SWSH12PT5-ETB",
+      "name": "Crown Zenith Elite Trainer Box",
+      "category": "elite_trainer_box",
+      "release_date": "2023-01-20",
+      "msrp_usd": 49.99,
+      "attributes": {"hype": 1.3, "out_of_print_months": 14, "long_run_multiple": 2.2},
+      "identifiers": {"pokemontcg": "swsh12pt5", "ebay_query": "Crown Zenith Elite Trainer Box sealed"}
+    },
+    {
+      "symbol": "PKM-SV01-BB",
+      "name": "Scarlet & Violet Base Booster Box",
+      "category": "booster_box",
+      "release_date": "2023-03-31",
+      "msrp_usd": 143.64,
+      "attributes": {"hype": 1.1, "out_of_print_months": 18, "long_run_multiple": 2.0},
+      "identifiers": {"pokemontcg": "sv1", "ebay_query": "Scarlet Violet Base Booster Box sealed"}
+    },
+    {
+      "symbol": "PKM-SV02-BB",
+      "name": "Paldea Evolved Booster Box",
+      "category": "booster_box",
+      "release_date": "2023-06-09",
+      "msrp_usd": 143.64,
+      "attributes": {"hype": 1.1, "out_of_print_months": 18, "long_run_multiple": 1.9},
+      "identifiers": {"pokemontcg": "sv2", "ebay_query": "Paldea Evolved Booster Box sealed"}
+    },
+    {
+      "symbol": "PKM-151-ETB",
+      "name": "Scarlet & Violet 151 Elite Trainer Box",
+      "category": "elite_trainer_box",
+      "release_date": "2023-09-22",
+      "msrp_usd": 49.99,
+      "attributes": {"hype": 1.6, "out_of_print_months": 10, "long_run_multiple": 2.9},
+      "identifiers": {"pokemontcg": "sv3pt5", "ebay_query": "Pokemon 151 Elite Trainer Box sealed"}
+    },
+    {
+      "symbol": "PKM-151-UPC",
+      "name": "Scarlet & Violet 151 Ultra Premium Collection",
+      "category": "ultra_premium_collection",
+      "release_date": "2023-10-06",
+      "msrp_usd": 119.99,
+      "attributes": {"hype": 1.55, "out_of_print_months": 11, "long_run_multiple": 2.8},
+      "identifiers": {"pokemontcg": "sv3pt5", "ebay_query": "Pokemon 151 Ultra Premium Collection sealed"}
+    },
+    {
+      "symbol": "PKM-SV045-BUNDLE",
+      "name": "Paldean Fates Booster Bundle",
+      "category": "booster_bundle",
+      "release_date": "2024-01-26",
+      "msrp_usd": 26.94,
+      "attributes": {"hype": 1.35, "out_of_print_months": 12, "long_run_multiple": 2.2},
+      "identifiers": {"pokemontcg": "sv4pt5", "ebay_query": "Paldean Fates Booster Bundle sealed"}
+    },
+    {
+      "symbol": "PKM-SV06-ETB",
+      "name": "Twilight Masquerade Elite Trainer Box",
+      "category": "elite_trainer_box",
+      "release_date": "2024-05-24",
+      "msrp_usd": 49.99,
+      "attributes": {"hype": 1.1, "out_of_print_months": 14, "long_run_multiple": 1.9},
+      "identifiers": {"pokemontcg": "sv6", "ebay_query": "Twilight Masquerade Elite Trainer Box sealed"}
+    },
+    {
+      "symbol": "PKM-SV08-BB",
+      "name": "Surging Sparks Booster Box",
+      "category": "booster_box",
+      "release_date": "2024-11-08",
+      "msrp_usd": 161.64,
+      "attributes": {"hype": 1.3, "out_of_print_months": 16, "long_run_multiple": 2.1},
+      "identifiers": {"pokemontcg": "sv8", "ebay_query": "Surging Sparks Booster Box sealed"}
+    },
+    {
+      "symbol": "PKM-SV08PT5-ETB",
+      "name": "Prismatic Evolutions Elite Trainer Box",
+      "category": "elite_trainer_box",
+      "release_date": "2025-01-17",
+      "msrp_usd": 49.99,
+      "attributes": {"hype": 1.7, "out_of_print_months": 9, "long_run_multiple": 3.0},
+      "identifiers": {"pokemontcg": "sv8pt5", "ebay_query": "Prismatic Evolutions Elite Trainer Box sealed"}
+    },
+    {
+      "symbol": "PKM-PGO-ETB",
+      "name": "Pokemon GO Elite Trainer Box",
+      "category": "elite_trainer_box",
+      "release_date": "2022-07-01",
+      "msrp_usd": 49.99,
+      "attributes": {"hype": 1.2, "out_of_print_months": 13, "long_run_multiple": 2.1},
+      "identifiers": {"pokemontcg": "pgo", "ebay_query": "Pokemon GO Elite Trainer Box sealed"}
+    },
+    {
+      "symbol": "PKM-CZ-COLL",
+      "name": "Crown Zenith Special Collection - Pikachu VMAX",
+      "category": "collection_box",
+      "release_date": "2023-01-20",
+      "msrp_usd": 24.99,
+      "attributes": {"hype": 1.15, "out_of_print_months": 12, "long_run_multiple": 2.0},
+      "identifiers": {"pokemontcg": "swsh12pt5", "ebay_query": "Crown Zenith Pikachu VMAX Special Collection sealed"}
+    }
+  ]
+}
