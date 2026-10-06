@@ -1,6 +1,9 @@
 #!/usr/bin/env sh
-# Container entrypoint: wait for the DB, apply migrations, optionally bootstrap a
-# full demo dataset (idempotent via a sentinel), then serve the API.
+# Container entrypoint: wait for the DB, apply migrations, then start the API
+# server IMMEDIATELY so the port opens fast (Render/PaaS port-scan requirement).
+# The heavy demo bootstrap (synth -> train -> forecast -> phase2) runs in the
+# BACKGROUND after the server is up, so the service becomes healthy right away
+# and data populates over the next few minutes.
 set -eu
 
 echo "[entrypoint] applying migrations (waiting for database)..."
@@ -25,8 +28,9 @@ elif [ "$BOOTSTRAP" = "1" ] && [ ! -f "$SENTINEL" ]; then
   DO_BOOT=1
 fi
 
-if [ "$DO_BOOT" = "1" ]; then
-  echo "[entrypoint] bootstrapping demo data (seed -> synth -> features -> train -> forecast -> vision-train)..."
+# Bootstrap runs as a background job so it never blocks the port from opening.
+run_bootstrap() {
+  echo "[bootstrap] starting demo data generation (seed -> synth -> features -> train -> forecast -> phase2)..."
   pokequant seed
   pokequant synth --days 900
   pokequant features build
@@ -39,17 +43,22 @@ if [ "$DO_BOOT" = "1" ]; then
   if python -c "import torch, torchvision" >/dev/null 2>&1; then
     pokequant vision-train --epochs 5 --samples 800
   else
-    echo "[entrypoint] torch not installed; skipping vision-train (heuristic grader active)."
+    echo "[bootstrap] torch not installed; skipping vision-train (heuristic grader active)."
   fi
   pokequant phase2
   mkdir -p "$(dirname "$SENTINEL")"
   touch "$SENTINEL"
-  echo "[entrypoint] bootstrap complete."
+  echo "[bootstrap] complete."
+}
+
+if [ "$DO_BOOT" = "1" ]; then
+  echo "[entrypoint] launching bootstrap in the background..."
+  run_bootstrap > /tmp/bootstrap.log 2>&1 &
 else
   echo "[entrypoint] skipping bootstrap (BOOTSTRAP=$BOOTSTRAP, sentinel present=$( [ -f "$SENTINEL" ] && echo yes || echo no ))."
 fi
 
 # Render (and some PaaS) inject $PORT; default to 8000 for local/compose.
 PORT="${PORT:-8000}"
-echo "[entrypoint] starting API on :$PORT ..."
+echo "[entrypoint] starting API on :$PORT (serving immediately; bootstrap continues in background if running) ..."
 exec pokequant serve --host 0.0.0.0 --port "$PORT"
