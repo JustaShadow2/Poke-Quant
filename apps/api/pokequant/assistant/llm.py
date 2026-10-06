@@ -16,12 +16,14 @@ from pokequant.core.logging import get_logger
 
 logger = get_logger(__name__)
 
-# Free models on Groq (ordered by preference: fastest/best first).
+# Groq models accessible on free/developer tiers (ordered fastest -> most capable).
+# NOTE: Groq retires models periodically. As of late 2026 the llama-3.x models
+# moved to Enterprise-only; the openai gpt-oss + qwen models are the current
+# developer-tier options. Verify at https://console.groq.com/docs/models
 FREE_MODELS = [
-    "llama-3.1-8b-instant",
-    "llama-3.2-3b-preview",
-    "gemma2-9b-it",
-    "llama-3.2-1b-preview",
+    "openai/gpt-oss-20b",    # 1000 T/s, cheapest — primary
+    "openai/gpt-oss-120b",   # larger fallback
+    "qwen/qwen3.8-27b",      # last-resort fallback
 ]
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
@@ -33,6 +35,7 @@ class GroqClient:
     def __init__(self, api_key: str, models: Optional[list[str]] = None) -> None:
         self.api_key = api_key
         self.models = models or FREE_MODELS
+        self.last_model_used: Optional[str] = None
         self._http = httpx.Client(timeout=30.0)
 
     def chat(
@@ -65,6 +68,7 @@ class GroqClient:
                 if resp.status_code == 200:
                     data = resp.json()
                     content = data["choices"][0]["message"]["content"]
+                    self.last_model_used = model
                     logger.info("groq_success", model=model, tokens=data.get("usage", {}))
                     return content
 

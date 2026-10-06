@@ -146,7 +146,7 @@ class AssistantService:
 
         return AssistantResponse(
             answer=response,
-            model_used=self.groq.models[0],  # Will refine to track actual model used
+            model_used=self.groq.last_model_used,
             context_instruments=context_instruments,
             grounded=True,
         )
