@@ -92,13 +92,10 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Both point at the API's PUBLIC https URL. Set after the API deploys, e.g.
+      # https://pokequant-api.onrender.com  (no trailing slash).
+      # API_BASE_URL is used by Next.js server components; NEXT_PUBLIC_* by the browser.
       - key: API_BASE_URL
-        # Internal URL for server-to-server calls (set after API deploys).
-        fromService:
-          type: web
-          name: pokequant-api
-          property: hostport
+        sync: false
       - key: NEXT_PUBLIC_API_BASE_URL
-        # Public API URL for browser calls. Set to the API's public URL, e.g.
-        # https://pokequant-api.onrender.com
         sync: false
