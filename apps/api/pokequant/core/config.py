@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     ebay_client_id: Optional[str] = None
     ebay_client_secret: Optional[str] = None
     ebay_marketplace_id: str = "EBAY_US"
+    groq_api_key: Optional[str] = None
 
     @property
     def cors_origins_list(self) -> list[str]:

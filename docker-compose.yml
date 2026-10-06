@@ -34,6 +34,10 @@ services:
   api:
     build:
       context: ./apps/api
+      # Lightweight by default (heuristic grader). For the CNN card-grader,
+      # build with: INSTALL_EXTRAS="[vision]" docker compose build api
+      args:
+        INSTALL_EXTRAS: "${INSTALL_EXTRAS:-}"
     environment:
       POKEQUANT_ENV: local
       LOG_JSON: "false"
@@ -48,6 +52,7 @@ services:
       EBAY_CLIENT_ID: ${EBAY_CLIENT_ID:-}
       EBAY_CLIENT_SECRET: ${EBAY_CLIENT_SECRET:-}
       EBAY_MARKETPLACE_ID: ${EBAY_MARKETPLACE_ID:-EBAY_US}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
     ports:
       - "8000:8000"
     volumes:
@@ -60,7 +65,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 12
-      start_period: 240s
+      start_period: 600s
 
   web:
     build:

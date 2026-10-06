@@ -7,3 +7,5 @@ npm-debug.log*
 Dockerfile
 .dockerignore
 README.md
+e2e
+playwright.config.ts

@@ -194,6 +194,168 @@ def forecast_run(
 
 
 @app.command()
+def explain(
+    horizon: str = typer.Option("d90"),
+    asset_class: str = typer.Option("pokemon"),
+) -> None:
+    """Compute and store SHAP explanations for all instruments."""
+    from pokequant.db.session import session_scope
+    from pokequant.ml.registry import FileModelRegistry
+    from pokequant.pipelines.phase2 import run_explanations
+
+    _bootstrap_logging()
+    settings = get_settings()
+    registry = FileModelRegistry(Path(settings.artifact_dir) / "models")
+    with session_scope() as session:
+        result = run_explanations(session, registry, horizon=Horizon(horizon), asset_class=asset_class)
+    typer.echo(f"Explanations: {result}")
+
+
+@app.command()
+def score(
+    horizon: str = typer.Option("d90"),
+    asset_class: str = typer.Option("pokemon"),
+) -> None:
+    """Compute Investment Scores and Risk Assessments for all instruments."""
+    from pokequant.db.session import session_scope
+    from pokequant.ml.registry import FileModelRegistry
+    from pokequant.pipelines.phase2 import run_scores
+
+    _bootstrap_logging()
+    settings = get_settings()
+    registry = FileModelRegistry(Path(settings.artifact_dir) / "models")
+    with session_scope() as session:
+        result = run_scores(session, registry, horizon=Horizon(horizon), asset_class=asset_class)
+    typer.echo(f"Scores: {result}")
+
+
+@app.command("calibrate")
+def calibrate_cmd(
+    horizon: str = typer.Option("d90"),
+    asset_class: str = typer.Option("pokemon"),
+) -> None:
+    """Run conformal calibration on the production model."""
+    from pokequant.db.session import session_scope
+    from pokequant.ml.registry import FileModelRegistry
+    from pokequant.pipelines.phase2 import run_calibration
+
+    _bootstrap_logging()
+    settings = get_settings()
+    registry = FileModelRegistry(Path(settings.artifact_dir) / "models")
+    with session_scope() as session:
+        result = run_calibration(session, registry, horizon=Horizon(horizon), asset_class=asset_class)
+    if result:
+        typer.echo(
+            f"Calibration done: coverage {result.empirical_coverage_before:.3f} -> "
+            f"{result.empirical_coverage_after:.3f} (adjustment={result.adjustment:.4f})"
+        )
+    else:
+        typer.echo("Calibration skipped (insufficient data or no model).")
+
+
+@app.command("phase2")
+def phase2_batch(
+    horizon: str = typer.Option("d90"),
+    asset_class: str = typer.Option("pokemon"),
+) -> None:
+    """Run the full Phase 2 batch: calibrate -> explain -> score -> risk."""
+    from pokequant.db.session import session_scope
+    from pokequant.ml.registry import FileModelRegistry
+    from pokequant.pipelines.phase2 import run_calibration, run_phase2_batch
+
+    _bootstrap_logging()
+    settings = get_settings()
+    registry = FileModelRegistry(Path(settings.artifact_dir) / "models")
+    with session_scope() as session:
+        run_calibration(session, registry, horizon=Horizon(horizon), asset_class=asset_class)
+        result = run_phase2_batch(session, registry, horizon=Horizon(horizon), asset_class=asset_class)
+    typer.echo(f"Phase 2 complete: {result}")
+
+
+@app.command("drift-check")
+def drift_check(
+    horizon: str = typer.Option("d90"),
+    asset_class: str = typer.Option("pokemon"),
+) -> None:
+    """Run drift detection on the production model."""
+    from pokequant.db.session import session_scope
+    from pokequant.ml.registry import FileModelRegistry
+    from pokequant.pipelines.retraining import check_drift
+
+    _bootstrap_logging()
+    settings = get_settings()
+    registry = FileModelRegistry(Path(settings.artifact_dir) / "models")
+    with session_scope() as session:
+        report = check_drift(session, registry, horizon=Horizon(horizon), asset_class=asset_class)
+    if report:
+        typer.echo(f"Drift check: recommendation={report['recommendation']}")
+        typer.echo(f"  Features drifted: {report['feature_drift']['drifted_count']}")
+        typer.echo(f"  Prediction drifted: {report['prediction_drift']['drifted']}")
+        typer.echo(f"  Calibration drifted: {report['calibration_drift']['drifted']}")
+    else:
+        typer.echo("Insufficient data for drift check.")
+
+
+@app.command("retrain")
+def retrain_cmd(
+    horizon: str = typer.Option("d90"),
+    asset_class: str = typer.Option("pokemon"),
+    force: bool = typer.Option(False, help="Force retrain even without drift."),
+) -> None:
+    """Check drift and retrain if needed (or forced)."""
+    from pokequant.db.session import session_scope
+    from pokequant.ml.registry import FileModelRegistry
+    from pokequant.pipelines.retraining import retrain_if_needed
+
+    _bootstrap_logging()
+    settings = get_settings()
+    registry = FileModelRegistry(Path(settings.artifact_dir) / "models")
+    with session_scope() as session:
+        result = retrain_if_needed(
+            session, registry, horizon=Horizon(horizon), asset_class=asset_class, force=force
+        )
+    typer.echo(f"Retrain result: action={result['action']}, retrained={result.get('retrained', False)}")
+
+
+@app.command("vision-train")
+def vision_train(
+    epochs: int = typer.Option(12, help="Training epochs."),
+    samples: int = typer.Option(4000, help="Number of synthetic training images."),
+    val_samples: int = typer.Option(500, help="Number of synthetic validation images."),
+    batch_size: int = typer.Option(32, help="Batch size."),
+    lr: float = typer.Option(1e-3, help="Learning rate."),
+) -> None:
+    """Train the card-grading CNN on synthetic data (requires the 'vision' extra)."""
+    try:
+        import torch  # noqa: F401
+        import torchvision  # noqa: F401
+    except ImportError:
+        typer.echo(
+            "torch/torchvision not installed. Install the vision extra:\n"
+            '  pip install -e ".[vision]"\n'
+            "The Grade tab works without it using the heuristic scorer."
+        )
+        raise typer.Exit(code=1) from None
+
+    from pokequant.grading.train import train_model
+
+    _bootstrap_logging()
+    settings = get_settings()
+    result = train_model(
+        artifact_dir=Path(settings.artifact_dir),
+        num_samples=samples,
+        val_samples=val_samples,
+        epochs=epochs,
+        batch_size=batch_size,
+        lr=lr,
+    )
+    typer.echo(
+        f"Vision model trained: train_loss={result['train_loss']:.4f} "
+        f"val_loss={result['val_loss']:.4f}"
+    )
+
+
+@app.command()
 def serve(host: str = "0.0.0.0", port: int = 8000, reload: bool = False) -> None:
     """Run the API with uvicorn."""
     import uvicorn

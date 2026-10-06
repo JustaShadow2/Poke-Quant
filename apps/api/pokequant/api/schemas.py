@@ -121,3 +121,86 @@ class HealthResponse(BaseModel):
     status: str
     version: str
     env: str
+
+
+class CardSummary(BaseModel):
+    id: str
+    name: str
+    set_name: str
+    set_id: str
+    number: str
+    rarity: Optional[str] = None
+    artist: Optional[str] = None
+    image_small: Optional[str] = None
+    image_large: Optional[str] = None
+    tcgplayer_url: Optional[str] = None
+    raw_usd: Optional[float] = None
+    raw_finish: Optional[str] = None
+    raw_low: Optional[float] = None
+    raw_mid: Optional[float] = None
+    raw_high: Optional[float] = None
+    prices_updated_at: Optional[str] = None
+    raw_source: Optional[str] = None
+    graded_source: Optional[str] = None
+
+
+class CardSearchResponse(BaseModel):
+    query: str
+    count: int
+    items: list[CardSummary]
+
+
+class GradedPrices(BaseModel):
+    raw_usd: float
+    psa9_usd: float
+    psa10_usd: float
+    psa8_usd: float
+    raw_source: str
+    graded_source: str
+    graded_note: str
+
+
+class GradeROISchema(BaseModel):
+    raw_usd: float
+    psa8_usd: float
+    psa9_usd: float
+    psa10_usd: float
+    grading_fee_usd: float
+    shipping_usd: float
+    all_in_cost_usd: float
+    p10: float
+    p9: float
+    p8: float
+    expected_grade_proceeds: float
+    expected_net_vs_raw: float
+    breakeven_p10: Optional[float] = None
+    verdict: str
+    rationale: str
+    prices_are_estimated: bool
+    probs_source: str
+
+
+class CardValuationResponse(BaseModel):
+    card: CardSummary
+    prices: GradedPrices
+    roi: GradeROISchema
+
+
+class VisionSubgrade(BaseModel):
+    name: str
+    score: float
+    notes: str
+
+
+class VisionGradeResponse(BaseModel):
+    predicted_grade: float
+    centering: VisionSubgrade
+    corners: VisionSubgrade
+    edges: VisionSubgrade
+    surface: VisionSubgrade
+    method: str
+    disclaimer: str
+
+
+class VisionROIResponse(CardValuationResponse):
+    vision: VisionGradeResponse

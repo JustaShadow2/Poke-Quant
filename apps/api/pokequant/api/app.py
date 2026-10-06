@@ -33,6 +33,10 @@ def create_app() -> FastAPI:
             allow_headers=["*"],
         )
 
+    # Phase 4: middleware stack (logging, rate limit, compression, security headers).
+    from pokequant.api.middleware import install_middleware
+    install_middleware(app)
+
     install_exception_handlers(app)
     app.include_router(api_router)
     return app

@@ -34,7 +34,13 @@ if [ "$DO_BOOT" = "1" ]; then
     pokequant train --horizon "$H"
     pokequant forecast run --horizon "$H"
   done
-  pokequant vision-train --epochs 5 --samples 800
+  # Vision CNN training only runs when the optional 'vision' extra (torch) is
+  # installed. On memory-constrained hosts the Grade tab uses the heuristic scorer.
+  if python -c "import torch, torchvision" >/dev/null 2>&1; then
+    pokequant vision-train --epochs 5 --samples 800
+  else
+    echo "[entrypoint] torch not installed; skipping vision-train (heuristic grader active)."
+  fi
   pokequant phase2
   mkdir -p "$(dirname "$SENTINEL")"
   touch "$SENTINEL"

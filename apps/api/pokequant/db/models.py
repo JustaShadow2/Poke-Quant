@@ -293,3 +293,228 @@ class ProviderRun(Base):
     request_count: Mapped[int] = mapped_column(sa.Integer, server_default="0")
     message: Mapped[Optional[str]] = mapped_column(sa.Text)
     details: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default=_JSON_EMPTY)
+
+
+# --------------------------------------------------------------------------- #
+# Phase 2 — Explainability, Scores, Risk
+# --------------------------------------------------------------------------- #
+
+
+class PredictionExplanation(Base):
+    """SHAP-based explanation stored per prediction."""
+
+    __tablename__ = "prediction_explanations"
+    __table_args__ = (
+        sa.UniqueConstraint("prediction_id", name="uq_explanation_prediction"),
+    )
+
+    id: Mapped[uuid.UUID] = _pk()
+    prediction_id: Mapped[uuid.UUID] = mapped_column(
+        sa.ForeignKey("predictions.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    instrument_id: Mapped[uuid.UUID] = mapped_column(
+        sa.ForeignKey("instruments.id", ondelete="CASCADE"), nullable=False
+    )
+    horizon: Mapped[str] = mapped_column(sa.String(8), nullable=False)
+    as_of_date: Mapped[date] = mapped_column(sa.Date, nullable=False)
+    base_value: Mapped[float] = mapped_column(sa.Float, nullable=False)
+    # Full attribution vector: {feature_name: shap_value}
+    attributions: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    # Top positive/negative drivers for quick access.
+    top_positive: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, default=list, server_default="[]"
+    )
+    top_negative: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, default=list, server_default="[]"
+    )
+    narrative: Mapped[Optional[str]] = mapped_column(sa.Text)
+    model_version_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        sa.ForeignKey("model_versions.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = _created_at()
+
+
+class InvestmentScoreRecord(Base):
+    """Persisted Investment Score per instrument per date."""
+
+    __tablename__ = "investment_scores"
+    __table_args__ = (
+        sa.UniqueConstraint("instrument_id", "as_of_date", "horizon", "profile",
+                            name="uq_score_instrument_date_horizon"),
+        sa.Index("ix_scores_instrument_date", "instrument_id", "as_of_date"),
+    )
+
+    id: Mapped[uuid.UUID] = _pk()
+    instrument_id: Mapped[uuid.UUID] = mapped_column(
+        sa.ForeignKey("instruments.id", ondelete="CASCADE"), nullable=False
+    )
+    as_of_date: Mapped[date] = mapped_column(sa.Date, nullable=False)
+    horizon: Mapped[str] = mapped_column(sa.String(8), nullable=False)
+    profile: Mapped[str] = mapped_column(sa.String(32), nullable=False, server_default="Balanced")
+    score: Mapped[float] = mapped_column(sa.Float, nullable=False)
+    band: Mapped[str] = mapped_column(sa.String(4), nullable=False)
+    raw_score: Mapped[float] = mapped_column(sa.Float, nullable=False)
+    # Component breakdown: [{name, percentile, weight, contribution, direction}]
+    components: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    reprint_penalty: Mapped[float] = mapped_column(sa.Float, server_default="0")
+    risk_penalty: Mapped[float] = mapped_column(sa.Float, server_default="0")
+    data_coverage: Mapped[float] = mapped_column(sa.Float, server_default="1")
+    is_sufficient: Mapped[bool] = mapped_column(server_default=sa.true())
+    model_version_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        sa.ForeignKey("model_versions.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = _created_at()
+
+
+class RiskAssessmentRecord(Base):
+    """Persisted risk assessment per instrument per date."""
+
+    __tablename__ = "risk_assessments"
+    __table_args__ = (
+        sa.UniqueConstraint("instrument_id", "as_of_date", "horizon",
+                            name="uq_risk_instrument_date_horizon"),
+        sa.Index("ix_risk_instrument_date", "instrument_id", "as_of_date"),
+    )
+
+    id: Mapped[uuid.UUID] = _pk()
+    instrument_id: Mapped[uuid.UUID] = mapped_column(
+        sa.ForeignKey("instruments.id", ondelete="CASCADE"), nullable=False
+    )
+    as_of_date: Mapped[date] = mapped_column(sa.Date, nullable=False)
+    horizon: Mapped[str] = mapped_column(sa.String(8), nullable=False)
+    overall_score: Mapped[float] = mapped_column(sa.Float, nullable=False)
+    overall_level: Mapped[str] = mapped_column(sa.String(16), nullable=False)
+    # Factor details: [{name, probability, severity, score, level, narrative}]
+    factors: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    narrative: Mapped[Optional[str]] = mapped_column(sa.Text)
+    created_at: Mapped[datetime] = _created_at()
+
+
+class ConformalCalibration(Base):
+    """Stored conformal calibration state per model version."""
+
+    __tablename__ = "conformal_calibrations"
+    __table_args__ = (
+        sa.UniqueConstraint("model_version_id", "lo_quantile", "hi_quantile",
+                            name="uq_conformal_model_quantiles"),
+    )
+
+    id: Mapped[uuid.UUID] = _pk()
+    model_version_id: Mapped[uuid.UUID] = mapped_column(
+        sa.ForeignKey("model_versions.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    nominal_coverage: Mapped[float] = mapped_column(sa.Float, nullable=False)
+    lo_quantile: Mapped[float] = mapped_column(sa.Float, nullable=False)
+    hi_quantile: Mapped[float] = mapped_column(sa.Float, nullable=False)
+    adjustment: Mapped[float] = mapped_column(sa.Float, nullable=False)
+    coverage_before: Mapped[float] = mapped_column(sa.Float, nullable=False)
+    coverage_after: Mapped[float] = mapped_column(sa.Float, nullable=False)
+    n_calibration: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    created_at: Mapped[datetime] = _created_at()
+
+
+# --------------------------------------------------------------------------- #
+# Phase 3 — Portfolio, Watchlists, Alerts, Similarity
+# --------------------------------------------------------------------------- #
+
+
+class Portfolio(Base):
+    """A user's portfolio (no auth yet — identified by a local session ID)."""
+
+    __tablename__ = "portfolios"
+
+    id: Mapped[uuid.UUID] = _pk()
+    name: Mapped[str] = mapped_column(sa.String(128), nullable=False, server_default="Default")
+    owner_id: Mapped[str] = mapped_column(sa.String(64), nullable=False, index=True)
+    created_at: Mapped[datetime] = _created_at()
+
+
+class PortfolioTransaction(Base):
+    """Buy/sell transaction in a portfolio."""
+
+    __tablename__ = "portfolio_transactions"
+    __table_args__ = (
+        sa.Index("ix_txn_portfolio_date", "portfolio_id", "transacted_at"),
+    )
+
+    id: Mapped[uuid.UUID] = _pk()
+    portfolio_id: Mapped[uuid.UUID] = mapped_column(
+        sa.ForeignKey("portfolios.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    instrument_id: Mapped[uuid.UUID] = mapped_column(
+        sa.ForeignKey("instruments.id", ondelete="CASCADE"), nullable=False
+    )
+    side: Mapped[str] = mapped_column(sa.String(4), nullable=False)  # "buy" or "sell"
+    quantity: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    price_usd: Mapped[Decimal] = mapped_column(Money, nullable=False)
+    fees_usd: Mapped[Decimal] = mapped_column(Money, server_default="0")
+    transacted_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False
+    )
+    notes: Mapped[Optional[str]] = mapped_column(sa.Text)
+    created_at: Mapped[datetime] = _created_at()
+
+
+class Watchlist(Base):
+    """A named watchlist."""
+
+    __tablename__ = "watchlists"
+
+    id: Mapped[uuid.UUID] = _pk()
+    name: Mapped[str] = mapped_column(sa.String(128), nullable=False)
+    owner_id: Mapped[str] = mapped_column(sa.String(64), nullable=False, index=True)
+    created_at: Mapped[datetime] = _created_at()
+
+
+class WatchlistItem(Base):
+    """An instrument on a watchlist."""
+
+    __tablename__ = "watchlist_items"
+    __table_args__ = (
+        sa.UniqueConstraint("watchlist_id", "instrument_id", name="uq_watchlist_instrument"),
+    )
+
+    id: Mapped[uuid.UUID] = _pk()
+    watchlist_id: Mapped[uuid.UUID] = mapped_column(
+        sa.ForeignKey("watchlists.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    instrument_id: Mapped[uuid.UUID] = mapped_column(
+        sa.ForeignKey("instruments.id", ondelete="CASCADE"), nullable=False
+    )
+    added_at: Mapped[datetime] = _created_at()
+
+
+class AlertRule(Base):
+    """A user-defined alert rule."""
+
+    __tablename__ = "alert_rules"
+
+    id: Mapped[uuid.UUID] = _pk()
+    owner_id: Mapped[str] = mapped_column(sa.String(64), nullable=False, index=True)
+    instrument_id: Mapped[uuid.UUID] = mapped_column(
+        sa.ForeignKey("instruments.id", ondelete="CASCADE"), nullable=False
+    )
+    rule_type: Mapped[str] = mapped_column(sa.String(32), nullable=False)
+    # e.g. "price_above", "price_below", "score_above", "score_below", "risk_above"
+    threshold: Mapped[float] = mapped_column(sa.Float, nullable=False)
+    is_active: Mapped[bool] = mapped_column(server_default=sa.true())
+    last_triggered_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True))
+    created_at: Mapped[datetime] = _created_at()
+
+
+class AlertEvent(Base):
+    """A fired alert notification."""
+
+    __tablename__ = "alert_events"
+
+    id: Mapped[uuid.UUID] = _pk()
+    rule_id: Mapped[uuid.UUID] = mapped_column(
+        sa.ForeignKey("alert_rules.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    instrument_id: Mapped[uuid.UUID] = mapped_column(
+        sa.ForeignKey("instruments.id", ondelete="CASCADE"), nullable=False
+    )
+    message: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    current_value: Mapped[float] = mapped_column(sa.Float, nullable=False)
+    is_read: Mapped[bool] = mapped_column(server_default=sa.false())
+    fired_at: Mapped[datetime] = _created_at()

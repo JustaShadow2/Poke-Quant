@@ -26,7 +26,8 @@ class FeatureRepository:
                 FeatureValue.as_of_date,
                 FeatureValue.feature_set,
             ],
-            set_={"values": stmt.excluded.values},
+            # Column is named "values" — stmt.excluded.values would bind the dict method.
+            set_={"values": stmt.excluded["values"]},
         )
         self.session.execute(stmt)
         return len(rows)

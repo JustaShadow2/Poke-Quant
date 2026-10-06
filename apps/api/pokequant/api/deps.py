@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from pokequant.core.config import Settings, get_settings
 from pokequant.db.session import get_session
+from pokequant.grading.service import GradingService
 from pokequant.ml.registry import FileModelRegistry
 from pokequant.repositories.catalog import CatalogRepository
 from pokequant.repositories.market import SnapshotRepository
@@ -40,3 +41,7 @@ def get_forecast_service(
         model_repo=ModelRepository(session),
         registry=registry,
     )
+
+
+def get_grading_service(settings: Settings = Depends(get_settings)) -> GradingService:
+    return GradingService.from_settings(settings)

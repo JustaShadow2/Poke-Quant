@@ -167,3 +167,40 @@ def test_forecast_absent_returns_404() -> None:
     client = build_client(catalog=FakeCatalog([inst]), forecast=FakeForecast(None))
     resp = client.get(f"/api/v1/instruments/{inst.id}/forecast")
     assert resp.status_code == 404
+
+
+def test_card_search_endpoint() -> None:
+    from pokequant.api.deps import get_grading_service
+    from pokequant.grading.cards import CardRecord
+
+    class FakeGrading:
+        def search(self, query: str, *, page_size: int = 12):
+            return [
+                CardRecord(
+                    id="sv3-1",
+                    name="Charmander",
+                    set_name="Obsidian Flames",
+                    set_id="sv3",
+                    number="1",
+                    rarity="Common",
+                    artist=None,
+                    image_small=None,
+                    image_large=None,
+                    tcgplayer_url=None,
+                    raw_usd=0.35,
+                    raw_finish="normal",
+                    raw_low=0.2,
+                    raw_mid=0.4,
+                    raw_high=0.8,
+                    prices_updated_at=None,
+                )
+            ]
+
+    app = create_app()
+    app.dependency_overrides[get_grading_service] = lambda: FakeGrading()
+    client = TestClient(app)
+    resp = client.get("/api/v1/cards/search?q=charmander")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["count"] == 1
+    assert body["items"][0]["name"] == "Charmander"

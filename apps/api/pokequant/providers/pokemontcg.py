@@ -74,3 +74,16 @@ class PokemonTcgProvider(HttpProvider):
     def fetch_sets(self) -> list[SetInfo]:
         payload = self._get("/sets", params={"pageSize": 250, "orderBy": "releaseDate"})
         return parse_sets(payload)
+
+    def search_cards(self, query: str, *, page_size: int = 12) -> dict[str, Any]:
+        """Search cards. `query` is matched against name (Lucene)."""
+        q = query.strip()
+        # Prefer name match; fall back to a loose full-text query.
+        lucene = f'name:"{q}" OR name:{q}*'
+        return self._get(
+            "/cards",
+            params={"q": lucene, "pageSize": min(page_size, 50), "orderBy": "name"},
+        )
+
+    def get_card(self, card_id: str) -> dict[str, Any]:
+        return self._get(f"/cards/{card_id}")

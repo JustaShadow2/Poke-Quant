@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { AssistantDock } from "@/components/AssistantDock";
+import { NavLinks } from "@/components/NavLinks";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -22,14 +24,7 @@ function TopBar() {
             alternative-assets research terminal
           </span>
         </Link>
-        <nav className="ml-auto flex items-center gap-4 text-sm text-terminal-muted">
-          <Link href="/" className="transition-colors hover:text-white">
-            Catalog
-          </Link>
-          <span className="badge border-terminal-border bg-terminal-panel text-terminal-muted">
-            Phase 1 · MVP
-          </span>
-        </nav>
+        <NavLinks />
       </div>
     </header>
   );
@@ -53,6 +48,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <TopBar />
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">{children}</main>
         <Footer />
+        <AssistantDock />
       </body>
     </html>
   );

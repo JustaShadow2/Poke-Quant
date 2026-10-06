@@ -18,7 +18,7 @@ help: ## Show this help
 .PHONY: setup
 setup: ## Create local venv and install the API package (editable, with dev extras)
 	mkdir -p .dev/uv-cache .dev/tmp data/artifacts
-	$(UV) venv .venv --python 3.9
+	@if [ ! -x .venv/bin/python ]; then $(UV) venv .venv --python 3.9; fi
 	$(UV) pip install --python $(PY) -e "$(API_DIR)[dev]"
 
 # ---------------------------------------------------------------- quality
@@ -68,12 +68,28 @@ features: ## Build point-in-time features
 train: ## Train baseline + GBM forecasters and register them
 	cd $(API_DIR) && ../../$(PY) -m pokequant.cli train --horizon d90
 
+.PHONY: vision-train
+vision-train: ## Train the card-grading CNN on synthetic data
+	cd $(API_DIR) && ../../$(PY) -m pokequant.cli vision-train
+
 .PHONY: forecast
 forecast: ## Batch-forecast all instruments with the production model
 	cd $(API_DIR) && ../../$(PY) -m pokequant.cli forecast run
 
+.PHONY: phase2
+phase2: ## Run Phase 2 batch: calibrate + explain + score + risk
+	cd $(API_DIR) && ../../$(PY) -m pokequant.cli phase2
+
+.PHONY: drift-check
+drift-check: ## Run drift detection on the production model
+	cd $(API_DIR) && ../../$(PY) -m pokequant.cli drift-check
+
+.PHONY: retrain
+retrain: ## Check drift and retrain if needed
+	cd $(API_DIR) && ../../$(PY) -m pokequant.cli retrain
+
 .PHONY: bootstrap
-bootstrap: migrate seed synth features train forecast ## Full offline end-to-end pipeline
+bootstrap: migrate seed synth features train vision-train forecast phase2 ## Full offline end-to-end pipeline
 
 # ---------------------------------------------------------------- run
 .PHONY: api

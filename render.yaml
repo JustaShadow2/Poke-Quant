@@ -33,7 +33,10 @@ services:
     runtime: docker
     dockerfilePath: ./apps/api/Dockerfile
     dockerContext: ./apps/api
-    plan: starter          # ML deps (torch, lightgbm) exceed free tier's 512MB RAM
+    # Free tier works: torch is an optional extra and is NOT installed by default,
+    # so the image fits in 512MB. The Grade tab uses the heuristic scorer.
+    # (To ship the CNN, set INSTALL_EXTRAS=[vision] and bump to a paid plan.)
+    plan: free
     healthCheckPath: /health
     envVars:
       - key: POKEQUANT_ENV
@@ -67,10 +70,14 @@ services:
         sync: false
       - key: EBAY_CLIENT_SECRET
         sync: false
-    disk:
-      name: pokequant-artifacts
-      mountPath: /data/artifacts
-      sizeGB: 1            # persists trained models + bootstrap sentinel across deploys
+    # NOTE: Render's free plan does NOT support persistent disks. Artifacts
+    # (trained models, bootstrap sentinel) live on ephemeral storage and are
+    # regenerated on each cold start. To persist them, switch `plan` to
+    # `starter` and uncomment the disk block below.
+    # disk:
+    #   name: pokequant-artifacts
+    #   mountPath: /data/artifacts
+    #   sizeGB: 1
 
   # ---------------------------------------------------------------------------
   # Web app (Next.js).
@@ -80,7 +87,7 @@ services:
     runtime: docker
     dockerfilePath: ./apps/web/Dockerfile
     dockerContext: ./apps/web
-    plan: starter
+    plan: free
     healthCheckPath: /
     envVars:
       - key: NODE_ENV

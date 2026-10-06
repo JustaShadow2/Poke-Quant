@@ -22,9 +22,15 @@ RUN apt-get update \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
+# INSTALL_EXTRAS controls optional dependency groups.
+#   ""          -> lightweight install (heuristic grader; fits Render free-tier RAM)
+#   "[vision]"  -> include torch + torchvision for the CNN card-grader
+# Default is lightweight; override with: --build-arg INSTALL_EXTRAS="[vision]"
+ARG INSTALL_EXTRAS=""
+
 COPY pyproject.toml README.md ./
 COPY pokequant ./pokequant
-RUN pip install --upgrade pip && pip install .
+RUN pip install --upgrade pip && pip install ".${INSTALL_EXTRAS}"
 
 # =============================================================================
 # Stage 2: Runtime (minimal, non-root)

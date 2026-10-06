@@ -121,6 +121,113 @@ export async function getForecast(
   );
 }
 
+export interface CardSummary {
+  id: string;
+  name: string;
+  set_name: string;
+  set_id: string;
+  number: string;
+  rarity: string | null;
+  artist: string | null;
+  image_small: string | null;
+  image_large: string | null;
+  tcgplayer_url: string | null;
+  raw_usd: number | null;
+  raw_finish: string | null;
+  raw_low: number | null;
+  raw_mid: number | null;
+  raw_high: number | null;
+  prices_updated_at: string | null;
+  raw_source: string | null;
+  graded_source: string | null;
+}
+
+export interface CardSearchResponse {
+  query: string;
+  count: number;
+  items: CardSummary[];
+}
+
+export interface GradedPrices {
+  raw_usd: number;
+  psa9_usd: number;
+  psa10_usd: number;
+  psa8_usd: number;
+  raw_source: string;
+  graded_source: string;
+  graded_note: string;
+}
+
+export interface GradeROI {
+  raw_usd: number;
+  psa8_usd: number;
+  psa9_usd: number;
+  psa10_usd: number;
+  grading_fee_usd: number;
+  shipping_usd: number;
+  all_in_cost_usd: number;
+  p10: number;
+  p9: number;
+  p8: number;
+  expected_grade_proceeds: number;
+  expected_net_vs_raw: number;
+  breakeven_p10: number | null;
+  verdict: string;
+  rationale: string;
+  prices_are_estimated: boolean;
+  probs_source: string;
+}
+
+export interface CardValuationResponse {
+  card: CardSummary;
+  prices: GradedPrices;
+  roi: GradeROI;
+}
+
+export interface VisionSubgrade {
+  name: string;
+  score: number;
+  notes: string;
+}
+
+export interface VisionGradeResponse {
+  predicted_grade: number;
+  centering: VisionSubgrade;
+  corners: VisionSubgrade;
+  edges: VisionSubgrade;
+  surface: VisionSubgrade;
+  method: string;
+  disclaimer: string;
+}
+
+export interface VisionROIResponse extends CardValuationResponse {
+  vision: VisionGradeResponse;
+}
+
+export function getBrowserApiBaseUrl(): string {
+  if (typeof window === "undefined") return getApiBaseUrl();
+  return (
+    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
+  ).replace(/\/$/, "");
+}
+
+export async function searchCards(q: string): Promise<CardSearchResponse | null> {
+  const params = new URLSearchParams({ q, limit: "12" });
+  return apiGet<CardSearchResponse>(`/api/v1/cards/search?${params.toString()}`);
+}
+
+export async function getCardValuation(
+  id: string,
+  gradingFee = 25,
+  shipping = 15,
+): Promise<CardValuationResponse | null> {
+  const params = new URLSearchParams({
+    grading_fee: String(gradingFee),
+    shipping: String(shipping),
+  });
+  return apiGet<CardValuationResponse>(`/api/v1/cards/${encodeURIComponent(id)}?${params}`);
+}
+
 /** Pull median/low/high out of a `{ "0.1": .., "0.5": .., "0.9": .. }` map. */
 export function bandFromQuantiles(
   q: Record<string, number>,
@@ -136,4 +243,104 @@ export function bandFromQuantiles(
     Math.abs(e[0] - 0.5) < Math.abs(best[0] - 0.5) ? e : best,
   );
   return { low, median: mid[1], high };
+}
+
+
+// ---------------------------------------------------------------------------
+// Phase 2: Explainability, Scores, Risk
+// ---------------------------------------------------------------------------
+
+export interface FeatureAttribution {
+  feature: string;
+  value: number;
+  shap_value: number;
+  direction: string;
+}
+
+export interface ExplanationResponse {
+  instrument_id: string;
+  horizon: string;
+  available: boolean;
+  message?: string;
+  as_of_date?: string;
+  base_value?: number;
+  top_positive?: FeatureAttribution[];
+  top_negative?: FeatureAttribution[];
+  narrative?: string;
+  attributions?: Record<string, number>;
+  model_version_id?: string | null;
+}
+
+export interface ScoreComponent {
+  name: string;
+  percentile: number;
+  weight: number;
+  contribution: number;
+  direction: string;
+}
+
+export interface ScoreResponse {
+  instrument_id: string;
+  horizon: string;
+  available: boolean;
+  message?: string;
+  as_of_date?: string;
+  score?: number;
+  band?: string;
+  raw_score?: number;
+  profile?: string;
+  components?: ScoreComponent[];
+  reprint_penalty?: number;
+  risk_penalty?: number;
+  data_coverage?: number;
+  is_sufficient?: boolean;
+}
+
+export interface RiskFactor {
+  name: string;
+  probability: number;
+  severity: number;
+  score: number;
+  level: string;
+  narrative: string;
+  data_driven: boolean;
+}
+
+export interface RiskResponse {
+  instrument_id: string;
+  horizon: string;
+  available: boolean;
+  message?: string;
+  as_of_date?: string;
+  overall_score?: number;
+  overall_level?: string;
+  factors?: RiskFactor[];
+  narrative?: string;
+}
+
+export async function getExplanation(
+  id: string,
+  horizon: Horizon = "d90",
+): Promise<ExplanationResponse | null> {
+  return apiGet<ExplanationResponse>(
+    `/api/v1/instruments/${id}/explain?horizon=${horizon}`,
+  );
+}
+
+export async function getScore(
+  id: string,
+  horizon: Horizon = "d90",
+): Promise<ScoreResponse | null> {
+  return apiGet<ScoreResponse>(
+    `/api/v1/instruments/${id}/score?horizon=${horizon}`,
+  );
+}
+
+export async function getRisk(
+  id: string,
+  horizon: Horizon = "d90",
+): Promise<RiskResponse | null> {
+  return apiGet<RiskResponse>(
+    `/api/v1/instruments/${id}/risk?horizon=${horizon}`,
+  );
 }

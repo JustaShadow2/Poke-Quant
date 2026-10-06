@@ -57,13 +57,18 @@ API, web) in one step:
    - `pokequant-web` → `NEXT_PUBLIC_API_BASE_URL` = your API URL (e.g. `https://pokequant-api.onrender.com`)
 
 Notes:
-- The API uses the `starter` plan because the ML dependencies (PyTorch, LightGBM)
-  exceed the free tier's 512 MB RAM. The DB and Redis run on free tiers.
+- **Fits the free tier.** PyTorch is an *optional* dependency (the `vision`
+  extra). The default Docker build skips it, keeping the image small enough for
+  Render's free 512 MB plan. The Grade tab automatically uses the heuristic
+  photo scorer instead of the CNN — every other feature is unaffected. To run
+  the CNN locally, build with `INSTALL_EXTRAS="[vision]"`.
 - Render's managed Postgres has no TimescaleDB extension; migrations are written
   to run on vanilla Postgres, so this works unchanged.
-- First boot runs the full bootstrap (synthetic data → train → forecast →
-  vision model → scores/risk), which takes several minutes. The disk mount keeps
-  trained models across deploys.
+- First boot runs the bootstrap (synthetic data → train → forecast →
+  scores/risk), which takes a few minutes. The disk mount keeps artifacts across
+  deploys.
+- Free Postgres/Redis plans are sufficient for a demo; upgrade the DB plan for
+  persistence beyond 90 days.
 
 ## Repository layout
 

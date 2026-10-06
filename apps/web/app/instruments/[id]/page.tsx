@@ -4,13 +4,22 @@ import { notFound } from "next/navigation";
 import { DataCoverageBadge } from "@/components/badges";
 import type { ObservedPoint } from "@/components/ForecastChart";
 import { ProductView } from "@/components/ProductView";
+import { RiskPanel } from "@/components/RiskPanel";
+import { ScoreBadge, ScoreBreakdown } from "@/components/ScoreBadge";
+import { WhyPanel } from "@/components/WhyPanel";
 import {
   HORIZONS,
   type ForecastResponse,
   type Horizon,
+  type ExplanationResponse,
+  type ScoreResponse,
+  type RiskResponse,
+  getExplanation,
   getForecast,
   getInstrument,
   getPrices,
+  getRisk,
+  getScore,
 } from "@/lib/api";
 import { formatDate, formatUSD } from "@/lib/format";
 
@@ -26,9 +35,12 @@ export default async function ProductPage({
   const [instrument, prices] = await Promise.all([getInstrument(id), getPrices(id)]);
   if (instrument === null) notFound();
 
-  const forecastList = await Promise.all(
-    HORIZONS.map((h) => getForecast(id, h)),
-  );
+  const [forecastList, scoreData, riskData, explanationData] = await Promise.all([
+    Promise.all(HORIZONS.map((h) => getForecast(id, h))),
+    getScore(id, "d90"),
+    getRisk(id, "d90"),
+    getExplanation(id, "d90"),
+  ]);
   const forecasts = Object.fromEntries(
     HORIZONS.map((h, i) => [h, forecastList[i]]),
   ) as Record<Horizon, ForecastResponse | null>;
@@ -80,6 +92,20 @@ export default async function ProductPage({
       ) : (
         <ProductView observed={observed} forecasts={forecasts} />
       )}
+
+      {/* Phase 2: Score, Explanation, Risk */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="space-y-4">
+          {scoreData && <ScoreBadge score={scoreData} />}
+          {scoreData && scoreData.available && <ScoreBreakdown score={scoreData} />}
+        </div>
+        <div>
+          {explanationData && <WhyPanel explanation={explanationData} />}
+        </div>
+        <div>
+          {riskData && <RiskPanel risk={riskData} />}
+        </div>
+      </div>
     </div>
   );
 }
