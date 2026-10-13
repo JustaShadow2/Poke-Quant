@@ -82,17 +82,6 @@ docker-compose.yml   db + redis + api + web
 
 See [`apps/api/README.md`](apps/api/README.md) and [`apps/web/README.md`](apps/web/README.md) for subproject details.
 
-## Why this project exists
-
-Collectible markets are large, inefficient, illiquid, and almost entirely un-instrumented. Prices are scattered across marketplaces, there is no standard "fair value," and buyers rely on gut feel. PokéQuant treats sealed collectibles as a **quantitative asset class**: it ingests permitted market data, engineers financial and alternative-data features, forecasts forward returns with calibrated uncertainty, and explains every prediction.
-
-## What makes it interview-grade
-
-- **Generalized platform, not a fan project.** A plugin architecture separates the asset-class-agnostic forecasting/scoring/risk core from Pokémon-specific data providers and attributes.
-- **Honest data engineering.** The design is built around the *real* 2026 legal and rate-limit constraints of each data source (see [Data Sources](docs/02-data-sources.md)), including a proprietary "own-your-timeseries" collection strategy and a calibrated synthetic backfill.
-- **Explainable by default.** No black-box outputs; every forecast persists SHAP attributions and a guarded natural-language rationale.
-- **Production-oriented.** Clean/hexagonal architecture, strong typing, testing pyramid, observability, CI/CD, IaC, and two documented deployment tracks (cost-optimized vs. enterprise scale).
-
 ## Documentation
 
 Start with the [documentation index](docs/README.md). The specification is organized as 14 chapters (`00`–`13`) plus Architecture Decision Records under [`docs/adr/`](docs/adr/README.md).
